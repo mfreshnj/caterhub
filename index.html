@@ -62,6 +62,8 @@
         </div>
 
         <div x-show="loading" class="text-center py-20 animate-pulse text-slate-400">Loading our menu...</div>
+        <div x-show="loading" class="text-center py-20 animate-pulse text-slate-400 font-medium tracking-wide">Preparing the kitchen and loading fresh items...</div>
+        <div x-show="!loading && menu.length === 0" class="text-center py-20 text-red-400">Unable to load the menu. Please check back soon!</div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" x-show="!loading" x-transition>
             <template x-for="item in filteredMenu" :key="item.id">
@@ -139,10 +141,19 @@
                         </div>
                         <input type="email" x-model="orderInfo.email" placeholder="Email Address (Optional)" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
                         <input type="text" x-model="orderInfo.address" placeholder="Full Delivery Address" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
-                        <div class="grid grid-cols-3 gap-3">
-                            <input type="date" x-model="orderInfo.date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
-                            <input type="time" x-model="orderInfo.time" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
-                            <input type="number" x-model="orderInfo.headcount" placeholder="Guests" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="space-y-1 text-left">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Delivery Date</label>
+                                <input type="date" x-model="orderInfo.date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div class="space-y-1 text-left">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Delivery Time</label>
+                                <input type="time" x-model="orderInfo.time" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                            </div>
+                            <div class="space-y-1 text-left">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Total Guests</label>
+                                <input type="number" x-model="orderInfo.headcount" placeholder="0" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                            </div>
                         </div>
                     </div>
 
@@ -410,7 +421,7 @@
                         ...this.currentPackage, 
                         qty: this.packageQty, 
                         selections: { ...this.packageSelections },
-                        surcharge: surcharge,
+                        surcharge: this.currentSurcharge,
                         notes: this.packageNotes,
                         totalServes: parseInt(this.currentPackage.serves || 0) * this.packageQty,
                         // Create a unique ID for the specific configuration
@@ -444,6 +455,12 @@
                         return;
                     }
 
+                    // Without a backend, we use the WhatsApp flow.
+                    // You can then manually send a Square invoice based on the details received.
+                    this.openWhatsApp();
+                },
+
+                openWhatsApp() {
                     const phone = "14253269803"; // Your WhatsApp Number
                     let message = `*🍽️ NEW CATERING ORDER*\n`;
                     message += `--------------------------------\n`;
