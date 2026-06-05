@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title x-text="brandName + ' - Live Menu'">CaterHub - Live Menu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body class="bg-slate-50 text-slate-900" x-data="cateringApp()">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 p-4">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-orange-600 text-white p-1.5 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight" x-text="brandName"></h1>
+            </div>
+            <button @click="showCart = !showCart" class="relative p-2 bg-orange-100 rounded-full">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                <span class="absolute -top-1 -right-1 bg-orange-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" x-text="cartCount"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="py-16 px-4 text-center bg-white border-b border-slate-100">
+        <h2 class="text-4xl font-black tracking-tight sm:text-6xl text-slate-900">Premium Catering <span class="text-orange-600">Simplified</span></h2>
+        <p class="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">Fresh, artisan platters for your next corporate event or private gathering. Delivered straight to your door.</p>
+    </header>
+
+    <!-- Menu Grid -->
+    <main class="max-w-6xl mx-auto p-4">
+        <!-- Meal Type Selector -->
+        <div class="flex justify-center mb-8">
+            <div class="inline-flex p-1 bg-slate-200/50 rounded-2xl backdrop-blur-sm">
+                <template x-for="type in mealTypes" :key="type">
+                    <button @click="selectedMealType = type; selectedCategory = 'All'"
+                        :class="selectedMealType === type ? 'bg-white shadow-sm text-orange-600' : 'text-slate-600 hover:text-slate-900'"
+                        class="px-6 py-2.5 rounded-xl font-bold transition-all duration-200 text-sm sm:text-base"
+                        x-text="type"></button>
+                </template>
+            </div>
+        </div>
+
+        <!-- Contextual Sub-Category Tabs -->
+        <div class="flex gap-2 overflow-x-auto pb-8 no-scrollbar" x-show="availableCategories.length > 0">
+            <button @click="selectedCategory = 'All'"
+                :class="selectedCategory === 'All' ? 'border-orange-600 text-orange-600 bg-orange-50' : 'border-slate-200 text-slate-500 bg-white'"
+                class="px-5 py-2 rounded-full border font-semibold text-sm transition whitespace-nowrap">
+                All <span x-text="selectedMealType"></span>
+            </button>
+            <template x-for="cat in availableCategories" :key="cat">
+                <button @click="selectedCategory = cat"
+                    :class="selectedCategory === cat ? 'border-orange-600 text-orange-600 bg-orange-50' : 'border-slate-200 text-slate-500 bg-white'"
+                    class="px-5 py-2 rounded-full border font-semibold text-sm transition whitespace-nowrap"
+                    x-text="cat"></button>
+            </template>
+        </div>
+
+        <div x-show="loading" class="text-center py-20 animate-pulse text-slate-400">Loading our menu...</div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" x-show="!loading" x-transition>
+            <template x-for="item in filteredMenu" :key="item.id">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                    <!-- Food Image -->
+                    <div class="h-56 w-full bg-slate-100 overflow-hidden relative">
+                        <img :src="item.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1000'" 
+                             @error="$el.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1000'"
+                             :alt="item.name" class="w-full h-full object-cover">
+                        <div class="absolute top-4 left-4">
+                            <span class="px-3 py-1 bg-white/90 backdrop-blur text-orange-600 text-xs font-bold rounded-full shadow-sm uppercase tracking-wider" x-text="item.category"></span>
+                        </div>
+                        <template x-show="item.serves" x-if="item.serves">
+                            <div class="absolute bottom-4 right-4 px-3 py-1 bg-slate-900/80 backdrop-blur text-white text-[10px] font-bold rounded-lg" x-text="'Serves ' + item.serves"></div>
+                        </template>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-xl font-bold text-slate-900" x-text="item.name"></h3>
+                            <span class="font-black text-xl text-slate-900" x-text="'$' + item.price"></span>
+                        </div>
+                        <p class="text-slate-500 text-sm mb-6 line-clamp-2" x-text="item.description"></p>
+                        <button @click="addToCart(item)" class="w-full bg-orange-600 text-white py-3 rounded-2xl font-bold hover:bg-orange-700 transition flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            Add to Order
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </main>
+
+    <!-- Cart Modal -->
+    <div x-show="showCart" class="fixed inset-0 z-[60] overflow-y-auto" x-cloak>
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="showCart = false"></div>
+            <div class="inline-block align-bottom bg-white rounded-t-2xl sm:rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold">Your Order</h3>
+                        <button @click="showCart = false" class="text-slate-400 hover:text-slate-600">✕</button>
+                    </div>
+                    
+                    <div class="space-y-4 max-h-96 overflow-y-auto">
+                        <template x-for="item in cart" :key="item.instanceId || item.id">
+                            <div class="flex justify-between items-center py-3 border-b border-slate-100">
+                                <div class="flex-1">
+                                    <p class="font-bold text-slate-800" x-text="item.name"></p>
+                                    <p class="text-xs text-orange-600 font-medium" x-text="item.category"></p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex items-center bg-slate-100 rounded-lg px-2">
+                                        <button @click="updateQty(item.instanceId || item.id, -1)" class="p-1 font-bold text-slate-500 hover:text-orange-600">-</button>
+                                        <span class="w-8 text-center text-sm font-bold" x-text="item.qty"></span>
+                                        <button @click="updateQty(item.instanceId || item.id, 1)" class="p-1 font-bold text-slate-500 hover:text-orange-600">+</button>
+                                    </div>
+                                    <div class="text-right w-24">
+                                        <p class="font-bold text-slate-900" x-text="'$' + ((parseFloat(item.price) + (item.surcharge || 0)) * item.qty).toFixed(2)"></p>
+                                        <p class="text-[10px] text-orange-500 font-medium" x-show="item.surcharge > 0" x-text="'+$' + (item.surcharge * item.qty).toFixed(2) + ' extra items'"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Order Details Form -->
+                    <div class="mt-8 pt-6 border-t border-slate-100 space-y-4" x-show="cart.length > 0">
+                        <h4 class="font-bold text-slate-900 flex items-center gap-2 text-left">
+                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            Delivery & Contact Info
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" x-model="orderInfo.contactName" placeholder="Contact Name" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                            <input type="tel" x-model="orderInfo.contactPhone" placeholder="Phone Number" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                        </div>
+                        <input type="email" x-model="orderInfo.email" placeholder="Email Address (Optional)" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                        <input type="text" x-model="orderInfo.address" placeholder="Full Delivery Address" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                        <div class="grid grid-cols-3 gap-3">
+                            <input type="date" x-model="orderInfo.date" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                            <input type="time" x-model="orderInfo.time" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                            <input type="number" x-model="orderInfo.headcount" placeholder="Guests" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                        </div>
+                    </div>
+
+                    <div class="mt-8 p-4 bg-slate-50 rounded-2xl flex justify-between items-center text-xl font-bold">
+                        <span class="text-slate-500 text-sm uppercase tracking-widest">Total Amount</span>
+                        <span x-text="'$' + total"></span>
+                    </div>
+
+                    <button @click="sendOrder()" :disabled="cart.length === 0" class="w-full mt-6 bg-green-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 hover:bg-green-700 transition">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C7.34 2 3.58 5.76 3.58 10.46c0 1.5.4 2.92 1.18 4.17L3 21l6.59-1.73c1.18.65 2.52 1.01 3.45 1.01 4.7 0 8.46-3.76 8.46-8.46S16.74 2 12.04 2zm3.96 13.04c-.1-.17-.39-.27-.81-.47-.42-.2-.24-.3-.17-.47.07-.17.49-.59.56-.71.07-.12.04-.2-.02-.3-.06-.1-.39-.93-.54-1.27-.15-.34-.12-.29-.24-.49-.12-.19-.98-.81-1.34-.98-.36-.17-.3-.15-.42-.15-.12 0-.27-.02-.42-.02-.15 0-.39.07-.59.3-.2.22-.76.74-.93.9-.17.17-.34.19-.63.07-.29-.12-.98-.36-1.87-1.15-.69-.61-1.15-1.37-1.29-1.62-.14-.24-.01-.37.1-.47.09-.09.2-.17.3-.27.1-.09.13-.17.2-.29.07-.12.04-.22-.02-.34-.06-.12-.54-1.3-.74-1.72-.19-.42-.39-.36-.54-.36-.15 0-.32-.02-.49-.02-.17 0-.44.07-.67.3-.23.22-.87.86-.87 2.1c0 1.24.9 2.42 1.02 2.58.12.17 1.76 2.68 4.27 3.73 2.51 1.05 2.51.74 2.96.69.45-.05 1.4-.58 1.6-1.13.2-.55.2-.93.14-1.04z"/></svg>
+                        Send Order to Kitchen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Package Customization Modal -->
+    <div x-show="showPackageModal" class="fixed inset-0 z-[70] overflow-y-auto" x-cloak>
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showPackageModal = false"></div>
+            <div class="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold text-slate-900" x-text="currentPackage?.name"></h3>
+                        <p class="text-sm text-slate-500" x-text="'Customize your ' + selectedMealType + ' package'"></p>
+                    </div>
+                    <button @click="showPackageModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+                </div>
+                
+                <div class="p-6 space-y-8 max-h-[60vh] overflow-y-auto">
+                    <template x-for="(config, category) in parsedOptions" :key="category">
+                        <div class="space-y-3">
+                            <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                <span x-text="'Select ' + category"></span>
+                                <span class="ml-auto text-[10px] text-slate-400 uppercase tracking-widest" 
+                                      x-text="config.limit + ' included' + (config.extra > 0 ? ' • $' + config.extra + ' per extra' : '')"></span>
+                            </h4>
+                            <div class="grid grid-cols-1 gap-2">
+                                <template x-for="option in config.items" :key="option">
+                                    <label class="flex items-center p-3 rounded-xl border border-slate-100 hover:bg-orange-50 hover:border-orange-200 cursor-pointer transition group">
+                                        <input type="checkbox" :value="option" 
+                                            x-model="packageSelections[category]"
+                                            class="w-5 h-5 text-orange-600 border-slate-300 rounded focus:ring-orange-500">
+                                        <span class="ml-3 text-slate-700 font-medium group-hover:text-orange-700" x-text="option"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <!-- Quantity and Notes -->
+                    <div class="pt-6 border-t border-slate-100 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg">Number of Packs</h4>
+                                <p class="text-xs text-orange-600 font-bold" x-text="'Serves ' + (parseInt(currentPackage?.serves || 0) * packageQty) + ' people total'"></p>
+                            </div>
+                            <div class="flex items-center bg-slate-100 rounded-2xl p-1">
+                                <button @click="if(packageQty > 1) packageQty--" class="w-10 h-10 flex items-center justify-center font-bold text-slate-500 hover:text-orange-600">-</button>
+                                <span class="w-12 text-center font-black text-lg" x-text="packageQty"></span>
+                                <button @click="packageQty++" class="w-10 h-10 flex items-center justify-center font-bold text-slate-500 hover:text-orange-600">+</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 mb-2">Instructions for this Pack</h4>
+                            <textarea x-model="packageNotes" placeholder="e.g. No onions in the poha, extra spicy chicken..." 
+                                class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-orange-500 min-h-[80px]"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-slate-50 border-t border-slate-100">
+                    <div x-show="currentSurcharge > 0" class="mb-4 flex justify-between items-center px-2 py-1 bg-orange-100 rounded-lg text-orange-700 text-sm font-bold">
+                        <span>Extra Items Surcharge</span>
+                        <span x-text="'+$' + currentSurcharge.toFixed(2)"></span>
+                    </div>
+                    <button @click="confirmPackageSelection()" 
+                        :disabled="!isPackageComplete"
+                        class="w-full bg-orange-600 disabled:bg-slate-300 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-95">
+                        Add to Order • <span x-text="'$' + ((parseFloat(currentPackage?.price || 0) + currentSurcharge) * packageQty).toFixed(2)"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer / Contact Us -->
+    <footer class="bg-white border-t border-slate-200 mt-20 py-12 px-4">
+        <div class="max-w-6xl mx-auto text-center">
+            <h3 class="text-xl font-bold text-slate-900 mb-4">Have Questions or Want to Order by Phone?</h3>
+            <p class="text-slate-600 mb-6">We're here to help with your custom catering needs.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="tel:+14253269803" class="inline-flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-slate-800 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                    Call +1 (425) 326-9803
+                </a>
+                <a href="mailto:mfreshnj@gmail.com?subject=Catering Inquiry - CaterHub" class="inline-flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-8 py-3 rounded-2xl font-bold hover:bg-slate-50 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    Email Us
+                </a>
+            </div>
+            <p class="mt-8 text-sm text-slate-400">&copy; <span x-text="new Date().getFullYear()"></span> <span x-text="brandName"></span>. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        function cateringApp() {
+            return {
+                brandName: 'CaterHub', // Defined here
+                loading: true,
+                showCart: false,
+                showPackageModal: false,
+                menu: [],
+                cart: [],
+                currentPackage: null,
+                packageSelections: {},
+                packageQty: 1,
+                packageNotes: '',
+                orderInfo: {
+                    contactName: '',
+                    contactPhone: '',
+                    email: '',
+                    address: '',
+                    date: '',
+                    time: '',
+                    headcount: ''
+                },
+                mealTypes: ['Breakfast', 'Lunch & Dinner', 'Snacks & Drinks'],
+                selectedMealType: 'Breakfast',
+                selectedCategory: 'All',
+                // PASTE YOUR PUBLISHED GOOGLE SHEET CSV LINK HERE
+                sheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRApkdkIr6w3IQrg4173o2lqQ4pfVHXdNBDXm2TCmnzmescgGCert8vbS6QePdjkYfhA89mKWeoilIg/pub?gid=0&single=true&output=csv',
+                
+                async init() {
+                    try {
+                        const response = await fetch(this.sheetUrl);
+                        const data = await response.text();
+                        this.menu = this.parseCSV(data);
+                        console.log("CaterHub Menu Loaded Successfully:");
+                        console.table(this.menu);
+                    } catch (e) {
+                        console.error("Failed to load menu", e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                parseCSV(csv) {
+                    const lines = csv.trim().split(/\r?\n/);
+                    if (lines.length === 0) return [];
+
+                    // Normalize headers: lowercase and replace spaces/hyphens with underscores
+                    // This handles "Meal Type" becoming "meal_type"
+                    const headers = lines[0].split(',').map(h => 
+                        h.replace(/"/g, '').trim().toLowerCase().replace(/[\s-]/g, '_')
+                    );
+                    
+                    return lines.slice(1).map(line => {
+                        // Regex to correctly split CSV while respecting quotes
+                        const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)|(?<=,|^)(?=,|$)/g) || [];
+                        const item = {};
+                        headers.forEach((header, i) => {
+                            let val = values[i] ? values[i].replace(/^"|"$/g, '').trim() : '';
+                            item[header] = val;
+                        });
+                        return item;
+                    });
+                },
+
+                get filteredMenu() {
+                    return this.menu.filter(i => {
+                        const itemType = (i.meal_type || '').trim().toLowerCase();
+                        const selectedType = this.selectedMealType.toLowerCase();
+                        const typeMatch = itemType === selectedType || 
+                                          (selectedType.split(' & ').some(t => t.trim().toLowerCase() === itemType) && itemType.length > 2) ||
+                                          (selectedType.includes(itemType) && itemType.length > 3);
+
+                        const catMatch = this.selectedCategory === 'All' || 
+                                         (i.category || '').trim() === this.selectedCategory;
+                        return typeMatch && catMatch;
+                    });
+                },
+
+                get availableCategories() {
+                    const cats = this.menu
+                        .filter(i => {
+                            const itemType = (i.meal_type || '').trim().toLowerCase();
+                            const selectedType = this.selectedMealType.toLowerCase();
+                            return itemType === selectedType || 
+                                   (selectedType.split(' & ').some(t => t.trim().toLowerCase() === itemType) && itemType.length > 2) ||
+                                   (selectedType.includes(itemType) && itemType.length > 3);
+                        })
+                        .map(i => i.category);
+                    return [...new Set(cats)].filter(c => c && c !== 'All');
+                },
+
+                get parsedOptions() {
+                    if (!this.currentPackage?.options) return {};
+                    // Format: "Category|Limit|ExtraPrice:Item1,Item2;..."
+                    const sections = this.currentPackage.options.split(';');
+                    return sections.reduce((acc, section) => {
+                        const [meta, items] = section.split(':');
+                        const [name, limit, extra] = meta.split('|');
+                        if (name && items) {
+                            acc[name.trim()] = {
+                                limit: parseInt(limit) || 1,
+                                extra: parseFloat(extra) || 0,
+                                items: items.split(',').map(i => i.trim())
+                            };
+                        }
+                        return acc;
+                    }, {});
+                },
+
+                get currentSurcharge() {
+                    let surcharge = 0;
+                    Object.entries(this.parsedOptions).forEach(([cat, config]) => {
+                        const count = (this.packageSelections[cat] || []).length;
+                        if (count > config.limit) {
+                            surcharge += (count - config.limit) * config.extra;
+                        }
+                    });
+                    return surcharge;
+                },
+
+                get isPackageComplete() {
+                    return Object.keys(this.parsedOptions).every(cat => this.packageSelections[cat]?.length > 0);
+                },
+
+                addToCart(product) {
+                    if (product.options) {
+                        this.currentPackage = product;
+                        this.packageSelections = {};
+                        this.packageQty = 1;
+                        this.packageNotes = '';
+                        // Pre-initialize selection arrays for checkboxes
+                        Object.keys(this.parsedOptions).forEach(cat => {
+                            this.packageSelections[cat] = [];
+                        });
+                        this.showPackageModal = true;
+                    } else {
+                        const existing = this.cart.find(i => i.id === product.id && !i.selections);
+                        if (existing) {
+                            existing.qty++;
+                        } else {
+                            this.cart.push({ ...product, qty: 1 });
+                        }
+                        this.showCart = true;
+                    }
+                },
+
+                confirmPackageSelection() {
+                    let surcharge = 0;
+                    Object.entries(this.parsedOptions).forEach(([cat, config]) => {
+                        const count = this.packageSelections[cat].length;
+                        if (count > config.limit) {
+                            surcharge += (count - config.limit) * config.extra;
+                        }
+                    });
+
+                    // Packages with different selections are treated as unique items in the cart
+                    this.cart.push({ 
+                        ...this.currentPackage, 
+                        qty: this.packageQty, 
+                        selections: { ...this.packageSelections },
+                        surcharge: surcharge,
+                        notes: this.packageNotes,
+                        totalServes: parseInt(this.currentPackage.serves || 0) * this.packageQty,
+                        // Create a unique ID for the specific configuration
+                        instanceId: Date.now() 
+                    });
+                    this.showPackageModal = false;
+                    this.showCart = true;
+                },
+
+                updateQty(uid, delta) {
+                    const item = this.cart.find(i => (i.instanceId || i.id) == uid);
+                    if (item) {
+                        item.qty += delta;
+                        if (item.qty <= 0) {
+                            this.cart = this.cart.filter(i => (i.instanceId || i.id) != uid);
+                        }
+                    }
+                },
+
+                get cartCount() {
+                    return this.cart.reduce((sum, item) => sum + item.qty, 0);
+                },
+
+                get total() {
+                    return this.cart.reduce((sum, item) => sum + ((parseFloat(item.price) + (item.surcharge || 0)) * item.qty), 0).toFixed(2);
+                },
+
+                sendOrder() {
+                    if(!this.orderInfo.contactName || !this.orderInfo.address || !this.orderInfo.date) {
+                        alert("Please fill in contact name, address, and date.");
+                        return;
+                    }
+
+                    const phone = "14253269803"; // Your WhatsApp Number
+                    let message = `*🍽️ NEW CATERING ORDER*\n`;
+                    message += `--------------------------------\n`;
+                    message += `*👤 Contact:* ${this.orderInfo.contactName} (${this.orderInfo.contactPhone})\n`;
+                    if (this.orderInfo.email) {
+                        message += `*📧 Email:* ${this.orderInfo.email}\n`;
+                    }
+                    message += `*📍 Address:* ${this.orderInfo.address}\n`;
+                    message += `*📅 Delivery:* ${this.orderInfo.date} at ${this.orderInfo.time}\n`;
+                    message += `*👥 Headcount:* ${this.orderInfo.headcount} guests\n`;
+                    message += `--------------------------------\n\n`;
+                    
+                    this.cart.forEach(item => {
+                        const unitPrice = parseFloat(item.price) + (item.surcharge || 0);
+                        const lineTotal = unitPrice * item.qty;
+                        
+                        message += `📦 *${item.qty}x ${item.name}*\n`;
+                        message += `   _Serves: ${item.totalServes || (item.serves * item.qty)} people_\n`;
+                        
+                        if (item.surcharge > 0) {
+                            message += `   (Incl. $${item.surcharge.toFixed(2)} extra item surcharges)\n`;
+                        }
+
+                        if (item.selections) {
+                            Object.entries(item.selections).forEach(([cat, choice]) => {
+                                message += `  └ ${cat}: ${Array.isArray(choice) ? choice.join(', ') : choice}\n`;
+                            });
+                        }
+
+                        if (item.notes) {
+                            message += `   📝 Note: ${item.notes}\n`;
+                        }
+                        
+                        message += `   *Subtotal: $${lineTotal.toFixed(2)}*\n\n`;
+                    });
+                    message += `--------------------------------\n`;
+                    message += `*💰 TOTAL ORDER: $${this.total}*`;
+                    
+                    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                    window.open(url, '_blank');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

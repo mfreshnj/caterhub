@@ -1,0 +1,5 @@
+id,meal_type,category,name,description,price,serves,image,options,
+1,Breakfast,Packages,Executive Breakfast,A complete start for your team with veg and non-veg options.,120,10,https://images.unsplash.com/photo-1496042399014-17f06f9736a4,"Veg Items|1|5.00:Idli,Poha","CategoryName|IncludedLimit|ExtraPrice:Item1,Item2,Item3;NextCategory|Limit|Price:ItemA,ItemB"
+2,Lunch & Dinner,Indian,Royal Thali Package,Traditional Indian feast with multiple mains and sides.,250,15,https://images.unsplash.com/photo-1546833998-877b37c2e5c6,Main Course\,
+3,Snacks & Drinks,Beverages,Cold Brew Gallon,Freshly roasted cold brew coffee for the office.,45,10-12,https://images.unsplash.com/photo-1517701604599-bb29b565090c,,
+4,Snacks & Drinks,Snacks,Assorted Cookie Box,Freshly baked chocolate chip and oatmeal cookies.,35,10,https://images.unsplash.com/photo-1499636136210-6f4ee915583e,,
