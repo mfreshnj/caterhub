@@ -93,7 +93,7 @@
                             <h3 class="text-xl font-bold text-slate-900" x-text="item.name"></h3>
                             <span class="font-black text-xl text-slate-900" x-text="'$' + item.price"></span>
                         </div>
-                        <p class="text-slate-500 text-sm mb-6 line-clamp-2" x-text="item.description"></p>
+                        <p class="text-slate-500 text-sm mb-6 line-clamp-3" x-text="item.description"></p>
                         <button @click="addToCart(item)" class="w-full bg-orange-600 text-white py-3 rounded-2xl font-bold hover:bg-orange-700 transition flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                             Add to Order
@@ -179,7 +179,7 @@
                             </div>
                             <div class="space-y-1 text-left">
                                 <label class="text-[10px] font-bold text-slate-400 uppercase px-1">Total Guests</label>
-                                <input type="number" x-model="orderInfo.headcount" placeholder="0" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
+                                <input type="number" x-model="orderInfo.headcount" placeholder="Min. headcount" class="w-full p-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-orange-500">
                             </div>
                         </div>
                     </div>
@@ -206,7 +206,7 @@
                 <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                     <div>
                         <h3 class="text-2xl font-bold text-slate-900" x-text="currentPackage?.name"></h3>
-                        <p class="text-sm text-slate-500" x-text="'Customize your ' + selectedMealType + ' package'"></p>
+                        <p class="text-sm text-slate-500" x-text="currentPackage?.description"></p>
                     </div>
                     <button @click="showPackageModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
                 </div>
@@ -421,8 +421,20 @@
                 },
 
                 get isPackageComplete() {
-                    // Validates that at least one item has a quantity > 0 across all categories
-                    return Object.values(this.packageSelections).some(cat => Object.values(cat).some(qty => qty > 0));
+                    const options = this.parsedOptions;
+                    const selections = this.packageSelections;
+                    const hasRequired = Object.values(options).some(config => config.limit > 0);
+
+                    if (hasRequired) {
+                        // Package style: Must fulfill all categories that have an included limit
+                        return Object.entries(options).every(([cat, config]) => {
+                            if (config.limit <= 0) return true;
+                            const catQty = Object.values(selections[cat] || {}).reduce((a, b) => a + b, 0);
+                            return catQty >= config.limit;
+                        });
+                    }
+                    // A la carte style: Just need at least one item overall
+                    return Object.values(selections).some(cat => Object.values(cat).some(qty => qty > 0));
                 },
 
                 addToCart(product) {
