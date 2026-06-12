@@ -46,6 +46,14 @@
             </div>
         </div>
 
+        <!-- Search Bar -->
+        <div class="max-w-md mx-auto mb-8 relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <input type="text" x-model="searchQuery" placeholder="Search for dishes (e.g. Butter Chicken)..." class="w-full pl-10 p-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-orange-500 transition-all outline-none shadow-sm">
+        </div>
+
         <!-- Contextual Sub-Category Tabs -->
         <div class="flex gap-2 overflow-x-auto pb-8 no-scrollbar" x-show="availableCategories.length > 0">
             <button @click="selectedCategory = 'All'"
@@ -109,10 +117,29 @@
                     
                     <div class="space-y-4 max-h-96 overflow-y-auto">
                         <template x-for="item in cart" :key="item.instanceId || item.id">
-                            <div class="flex justify-between items-center py-3 border-b border-slate-100">
-                                <div class="flex-1">
+                            <div class="flex justify-between items-center py-3 border-b border-slate-100 group">
+                                <div class="flex-1" :class="item.selections ? 'cursor-pointer' : ''" @click="item.selections ? editCartItem(item.instanceId) : null">
                                     <p class="font-bold text-slate-800" x-text="item.name"></p>
                                     <p class="text-xs text-orange-600 font-medium" x-text="item.category"></p>
+                                    
+                                    <!-- Detailed Selections for Packages -->
+                                    <template x-if="item.selections">
+                                        <div class="mt-1 space-y-0.5 border-l-2 border-orange-100 pl-2">
+                                            <template x-for="[cat, choice] in Object.entries(item.selections)" :key="cat">
+                                                <p x-show="Object.values(choice).some(q => q > 0)" class="text-[10px] text-slate-500 leading-tight">
+                                                    <span class="font-semibold text-slate-600" x-text="cat + ': '"></span>
+                                                    <span x-text="Object.entries(choice).filter(([n, q]) => q > 0).map(([n, q]) => q + 'x ' + n).join(', ')"></span>
+                                                </p>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- Specific Item Notes -->
+                                    <p x-show="item.notes" class="text-[10px] text-slate-400 italic mt-1 pl-2" x-text="'Note: ' + item.notes"></p>
+                                    
+                                    <template x-if="item.selections">
+                                        <p class="text-[10px] text-orange-400 font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">Click to Edit Selection</p>
+                                    </template>
                                 </div>
                                 <div class="flex items-center gap-4">
                                     <div class="flex items-center bg-slate-100 rounded-lg px-2">
@@ -191,16 +218,20 @@
                                 <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
                                 <span x-text="'Select ' + category"></span>
                                 <span class="ml-auto text-[10px] text-slate-400 uppercase tracking-widest" 
-                                      x-text="config.limit + ' included' + (config.extra > 0 ? ' • $' + config.extra + ' per extra' : '')"></span>
+                                      x-text="(config.limit > 0 ? config.limit + ' included' : '') + (config.limit > 0 && config.extra > 0 ? ' • ' : '') + (config.extra > 0 ? '$' + config.extra + (config.limit > 0 ? ' per extra' : ' per item') : '')"></span>
                             </h4>
                             <div class="grid grid-cols-1 gap-2">
                                 <template x-for="option in config.items" :key="option">
-                                    <label class="flex items-center p-3 rounded-xl border border-slate-100 hover:bg-orange-50 hover:border-orange-200 cursor-pointer transition group">
-                                        <input type="checkbox" :value="option" 
-                                            x-model="packageSelections[category]"
-                                            class="w-5 h-5 text-orange-600 border-slate-300 rounded focus:ring-orange-500">
-                                        <span class="ml-3 text-slate-700 font-medium group-hover:text-orange-700" x-text="option"></span>
-                                    </label>
+                                    <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white">
+                                        <span class="text-slate-700 font-medium" x-text="option"></span>
+                                        <div class="flex items-center bg-slate-100 rounded-lg p-1">
+                                            <button @click="updateOptionQty(category, option, -1)" 
+                                                class="w-8 h-8 flex items-center justify-center font-bold text-slate-500 hover:text-orange-600">-</button>
+                                            <span class="w-8 text-center text-sm font-bold" x-text="packageSelections[category]?.[option] || 0"></span>
+                                            <button @click="updateOptionQty(category, option, 1)" 
+                                                class="w-8 h-8 flex items-center justify-center font-bold text-slate-500 hover:text-orange-600">+</button>
+                                        </div>
+                                    </div>
                                 </template>
                             </div>
                         </div>
@@ -272,6 +303,7 @@
                 cart: [],
                 currentPackage: null,
                 packageSelections: {},
+                editingInstanceId: null,
                 packageQty: 1,
                 packageNotes: '',
                 orderInfo: {
@@ -286,6 +318,7 @@
                 mealTypes: ['Breakfast', 'Lunch & Dinner', 'Snacks & Drinks'],
                 selectedMealType: 'Breakfast',
                 selectedCategory: 'All',
+                searchQuery: '',
                 // PASTE YOUR PUBLISHED GOOGLE SHEET CSV LINK HERE
                 sheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRApkdkIr6w3IQrg4173o2lqQ4pfVHXdNBDXm2TCmnzmescgGCert8vbS6QePdjkYfhA89mKWeoilIg/pub?gid=0&single=true&output=csv',
                 
@@ -335,7 +368,12 @@
 
                         const catMatch = this.selectedCategory === 'All' || 
                                          (i.category || '').trim() === this.selectedCategory;
-                        return typeMatch && catMatch;
+
+                        const searchMatch = !this.searchQuery || 
+                                            (i.name || '').toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                                            (i.description || '').toLowerCase().includes(this.searchQuery.toLowerCase());
+
+                        return typeMatch && catMatch && searchMatch;
                     });
                 },
 
@@ -361,7 +399,7 @@
                         const [name, limit, extra] = meta.split('|');
                         if (name && items) {
                             acc[name.trim()] = {
-                                limit: parseInt(limit) || 1,
+                                limit: (limit !== undefined && limit !== '' && !isNaN(limit)) ? parseInt(limit) : 1,
                                 extra: parseFloat(extra) || 0,
                                 items: items.split(',').map(i => i.trim())
                             };
@@ -373,7 +411,8 @@
                 get currentSurcharge() {
                     let surcharge = 0;
                     Object.entries(this.parsedOptions).forEach(([cat, config]) => {
-                        const count = (this.packageSelections[cat] || []).length;
+                        // Sum up all quantities in this category
+                        const count = Object.values(this.packageSelections[cat] || {}).reduce((a, b) => a + b, 0);
                         if (count > config.limit) {
                             surcharge += (count - config.limit) * config.extra;
                         }
@@ -382,18 +421,23 @@
                 },
 
                 get isPackageComplete() {
-                    return Object.keys(this.parsedOptions).every(cat => this.packageSelections[cat]?.length > 0);
+                    // Validates that at least one item has a quantity > 0 across all categories
+                    return Object.values(this.packageSelections).some(cat => Object.values(cat).some(qty => qty > 0));
                 },
 
                 addToCart(product) {
+                    this.editingInstanceId = null;
                     if (product.options) {
                         this.currentPackage = product;
                         this.packageSelections = {};
                         this.packageQty = 1;
                         this.packageNotes = '';
-                        // Pre-initialize selection arrays for checkboxes
+                        // Pre-initialize selection objects for quantities
                         Object.keys(this.parsedOptions).forEach(cat => {
-                            this.packageSelections[cat] = [];
+                            this.packageSelections[cat] = {};
+                            this.parsedOptions[cat].items.forEach(opt => {
+                                this.packageSelections[cat][opt] = 0;
+                            });
                         });
                         this.showPackageModal = true;
                     } else {
@@ -407,26 +451,46 @@
                     }
                 },
 
-                confirmPackageSelection() {
-                    let surcharge = 0;
-                    Object.entries(this.parsedOptions).forEach(([cat, config]) => {
-                        const count = this.packageSelections[cat].length;
-                        if (count > config.limit) {
-                            surcharge += (count - config.limit) * config.extra;
-                        }
-                    });
+                updateOptionQty(category, option, delta) {
+                    if (!this.packageSelections[category]) this.packageSelections[category] = {};
+                    let current = this.packageSelections[category][option] || 0;
+                    this.packageSelections[category][option] = Math.max(0, current + delta);
+                },
 
-                    // Packages with different selections are treated as unique items in the cart
-                    this.cart.push({ 
+                editCartItem(uid) {
+                    const item = this.cart.find(i => i.instanceId == uid);
+                    if (!item) return;
+
+                    this.currentPackage = this.menu.find(m => m.id == item.id);
+                    this.packageSelections = JSON.parse(JSON.stringify(item.selections));
+                    this.packageQty = item.qty;
+                    this.packageNotes = item.notes;
+                    this.editingInstanceId = uid;
+                    
+                    this.showCart = false;
+                    this.showPackageModal = true;
+                },
+
+                confirmPackageSelection() {
+                    const packageData = { 
                         ...this.currentPackage, 
                         qty: this.packageQty, 
-                        selections: { ...this.packageSelections },
+                        selections: JSON.parse(JSON.stringify(this.packageSelections)),
                         surcharge: this.currentSurcharge,
                         notes: this.packageNotes,
                         totalServes: parseInt(this.currentPackage.serves || 0) * this.packageQty,
-                        // Create a unique ID for the specific configuration
-                        instanceId: Date.now() 
-                    });
+                    };
+
+                    if (this.editingInstanceId) {
+                        const index = this.cart.findIndex(i => i.instanceId == this.editingInstanceId);
+                        if (index !== -1) {
+                            this.cart.splice(index, 1, { ...packageData, instanceId: this.editingInstanceId });
+                        }
+                        this.editingInstanceId = null;
+                    } else {
+                        this.cart.push({ ...packageData, instanceId: Date.now() });
+                    }
+                    
                     this.showPackageModal = false;
                     this.showCart = true;
                 },
@@ -486,7 +550,11 @@
 
                         if (item.selections) {
                             Object.entries(item.selections).forEach(([cat, choice]) => {
-                                message += `  └ ${cat}: ${Array.isArray(choice) ? choice.join(', ') : choice}\n`;
+                                // choice is now an object { ItemName: Qty }
+                                const picks = Object.entries(choice)
+                                    .filter(([name, qty]) => qty > 0)
+                                    .map(([name, qty]) => `${qty}x ${name}`);
+                                if (picks.length > 0) message += `  └ ${cat}: ${picks.join(', ')}\n`;
                             });
                         }
 
